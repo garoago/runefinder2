@@ -20,7 +20,7 @@ func progressDisplay(running <-chan bool) {
 	for {
 		select {
 		case <-running:
-			fmt.Println("xxx")
+			fmt.Println()
 		case <-time.After(200 * time.Millisecond):
 			fmt.Print(".")
 		}
@@ -52,7 +52,15 @@ func getUcdFile(fileName string) {
 	file.Close()
 }
 
-func buildIndex(fileName string) (map[string]runeSlice, map[rune]string) {
+type runesSlice []rune
+
+func (p runesSlice) Len() int           { return len(p) }
+func (p runesSlice) Less(i, j int) bool { return p[i] < p[j] }
+func (p runesSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+type runesMap map[rune]struct{}
+
+func buildIndex(fileName string) (map[string]runesSlice, map[rune]string) {
 	if _, err := os.Stat(fileName); os.IsNotExist(err) {
 		getUcdFile(fileName)
 	}
@@ -63,7 +71,7 @@ func buildIndex(fileName string) (map[string]runeSlice, map[rune]string) {
 
 	lines := strings.Split(string(content), "\n")
 
-	index := map[string]runeSlice{}
+	index := map[string]runesSlice{}
 	names := map[rune]string{}
 
 	for _, line := range lines {
@@ -75,9 +83,9 @@ func buildIndex(fileName string) (map[string]runeSlice, map[rune]string) {
 			names[uchar] = fields[1]
 			// fmt.Printf("%#v", index)
 			for _, word := range strings.Split(fields[1], " ") {
-				var entries runeSlice
+				var entries runesSlice
 				if len(index[word]) < 1 {
-					entries = runeSlice{}
+					entries = runesSlice{}
 				} else {
 					entries = index[word]
 				}
@@ -89,15 +97,17 @@ func buildIndex(fileName string) (map[string]runeSlice, map[rune]string) {
 	return index, names
 }
 
-type runeSlice []rune
+func intersect(a, b runesMap) runesMap {
+	result := runesMap{}
+	for k := range a {
+		if _, occurs := b[k]; occurs {
+			result[k] = struct{}{}
+		}
+	}
+	return result
+}
 
-func (p runeSlice) Len() int           { return len(p) }
-func (p runeSlice) Less(i, j int) bool { return p[i] < p[j] }
-func (p runeSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
-
-type runesMap map[rune]struct{}
-
-func findRunes(query []string, index map[string]runeSlice) runeSlice {
+func findRunes(query []string, index map[string]runesSlice) runesSlice {
 	foundList := []runesMap{}
 	for _, word := range query {
 		word = strings.ToUpper(word)
@@ -107,27 +117,13 @@ func findRunes(query []string, index map[string]runeSlice) runeSlice {
 		}
 		foundList = append(foundList, found)
 	}
-	result := runeSlice{}
-	if len(foundList) == 1 {
-		for uchar := range foundList[0] {
-			result = append(result, uchar)
-		}
-	} else {
-		for i, found := range foundList {
-			for candidate := range found {
-				if i < len(foundList) {
-					for j, innerFound := range foundList {
-						if j == i {
-							continue
-						}
-						_, occurs := innerFound[candidate]
-						if occurs {
-							result = append(result, candidate)
-						}
-					}
-				}
-			}
-		}
+	commonRunes := foundList[0]
+	for _, found := range foundList[1:] {
+		commonRunes = intersect(commonRunes, found)
+	}
+	result := runesSlice{}
+	for uchar := range commonRunes {
+		result = append(result, uchar)
 	}
 	sort.Sort(result)
 	return result

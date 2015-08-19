@@ -14,16 +14,16 @@ type MySuite struct{}
 var _ = check.Suite(&MySuite{})
 
 func (s *MySuite) TestFindRunes(c *check.C) {
-	index := map[string]runeSlice{
-		"REGISTERED": runeSlice{0xAE},
-		"BLACK":      runeSlice{0x265A, 0x265B, 0x265C, 0x265D, 0x265E, 0x265F, 0x2B24 /* not chess */},
-		"CHESS":      runeSlice{0x265A, 0x265B, 0x265C, 0x265D, 0x265E, 0x265F, 0x2654 /* not black */},
+	index := map[string]runesSlice{
+		"REGISTERED": runesSlice{0xAE},
+		"BLACK":      runesSlice{0x265A, 0x265B, 0x265C, 0x265D, 0x265E, 0x265F, 0x2B24 /* not chess */},
+		"CHESS":      runesSlice{0x265A, 0x265B, 0x265C, 0x265D, 0x265E, 0x265F, 0x2654 /* not black */},
 	}
 
-	tests := map[string]runeSlice{
-		"registered":  runeSlice{0xAE},
-		"nonesuch":    runeSlice{},
-		"chess black": runeSlice{0x265A, 0x265B, 0x265C, 0x265D, 0x265E, 0x265F},
+	tests := map[string]runesSlice{
+		"registered":  runesSlice{0xAE},
+		"nonesuch":    runesSlice{},
+		"chess black": runesSlice{0x265A, 0x265B, 0x265C, 0x265D, 0x265E, 0x265F},
 	}
 	for query, found := range tests {
 		words := strings.Split(query, " ")
