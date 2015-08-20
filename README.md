@@ -28,11 +28,10 @@ U+1F63B 😻 	SMILING CAT FACE WITH HEART-SHAPED EYES
 
 This is a port of the Python [charfinder](https://github.com/fluentpython/example-code/tree/master/18-asyncio/charfinder) utilities created for the [Fluent Python](http://shop.oreilly.com/product/0636920032519.do) book. 
 
-Go development was done at [Garoa Gophers](https://garoa.net.br/wiki/Garoa_Gophers) meetings with:
+Go development was done during [Garoa Gophers](https://garoa.net.br/wiki/Garoa_Gophers) meetings with:
 
-* [@alexandre](https://github.com/alexandre/) Souza
-* [@andrewsmedina](https://github.com/andrewsmedina/)
-* João Martins [@jcmartins](https://github.com/jcmartins)
-* Luciano [@ramalho](https://github.com/ramalho/)
+* Alexandre Souza ([@alexandre](https://github.com/alexandre/))
+* Andrews Medina ([@andrewsmedina](https://github.com/andrewsmedina/))
+* João "JC" Martins ([@jcmartins](https://github.com/jcmartins))
+* Luciano Ramalho ([@ramalho](https://github.com/ramalho/))
 * Michael Howard
-
