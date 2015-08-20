@@ -54,11 +54,21 @@ func getUcdFile(fileName string) {
 
 type runesSlice []rune
 
-func (p runesSlice) Len() int           { return len(p) }
-func (p runesSlice) Less(i, j int) bool { return p[i] < p[j] }
-func (p runesSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+func (rs runesSlice) Len() int           { return len(rs) }
+func (rs runesSlice) Less(i, j int) bool { return rs[i] < rs[j] }
+func (rs runesSlice) Swap(i, j int)      { rs[i], rs[j] = rs[j], rs[i] }
 
-type runesMap map[rune]struct{}
+type runeSet map[rune]struct{}
+
+func (rs runeSet) Intersection(other runeSet) runeSet {
+	result := runeSet{}
+	for k := range rs {
+		if _, occurs := other[k]; occurs {
+			result[k] = struct{}{}
+		}
+	}
+	return result
+}
 
 func buildIndex(fileName string) (map[string]runesSlice, map[rune]string) {
 	if _, err := os.Stat(fileName); os.IsNotExist(err) {
@@ -97,21 +107,11 @@ func buildIndex(fileName string) (map[string]runesSlice, map[rune]string) {
 	return index, names
 }
 
-func intersect(a, b runesMap) runesMap {
-	result := runesMap{}
-	for k := range a {
-		if _, occurs := b[k]; occurs {
-			result[k] = struct{}{}
-		}
-	}
-	return result
-}
-
 func findRunes(query []string, index map[string]runesSlice) runesSlice {
-	foundList := []runesMap{}
+	foundList := []runeSet{}
 	for _, word := range query {
 		word = strings.ToUpper(word)
-		found := runesMap{}
+		found := runeSet{}
 		for _, uchar := range index[word] {
 			found[uchar] = struct{}{}
 		}
@@ -119,7 +119,7 @@ func findRunes(query []string, index map[string]runesSlice) runesSlice {
 	}
 	commonRunes := foundList[0]
 	for _, found := range foundList[1:] {
-		commonRunes = intersect(commonRunes, found)
+		commonRunes = commonRunes.Intersection(found)
 	}
 	result := runesSlice{}
 	for uchar := range commonRunes {
