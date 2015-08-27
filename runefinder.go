@@ -60,6 +60,10 @@ func (rs runeSlice) Swap(i, j int)      { rs[i], rs[j] = rs[j], rs[i] }
 
 type runeSet map[rune]struct{}
 
+func (rs runeSet) Put(key rune) {
+	rs[key] = struct{}{} // zero-byte struct
+}
+
 func (rs runeSet) Intersection(other runeSet) runeSet {
 	result := runeSet{}
 	for k := range rs {
@@ -91,13 +95,11 @@ func buildIndex(fileName string) (map[string]runeSet, map[rune]string) {
 			uchar = rune(code64)
 			names[uchar] = fields[1]
 			for _, word := range strings.Split(fields[1], " ") {
-				var existing runeSet
-				if len(index[word]) < 1 {
+				existing, ok := index[word]
+				if !ok {
 					existing = runeSet{}
-				} else {
-					existing = index[word]
 				}
-				existing[uchar] = struct{}{}
+				existing.Put(uchar)
 				index[word] = existing
 			}
 		}
