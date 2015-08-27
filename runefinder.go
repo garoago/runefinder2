@@ -64,10 +64,15 @@ func (rs RuneSet) Put(key rune) {
 	rs[key] = struct{}{} // zero-byte struct
 }
 
+func (rs RuneSet) Contains(key rune) bool {
+	_, found := rs[key]
+	return found
+}
+
 func (rs RuneSet) Intersection(other RuneSet) RuneSet {
 	result := RuneSet{}
 	for k := range rs {
-		if _, occurs := other[k]; occurs {
+		if other.Contains(k) {
 			result.Put(k)
 		}
 	}
