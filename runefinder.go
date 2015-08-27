@@ -52,29 +52,50 @@ func getUcdFile(fileName string) {
 	file.Close()
 }
 
-type runeSlice []rune
+type RuneSlice []rune
 
-func (rs runeSlice) Len() int           { return len(rs) }
-func (rs runeSlice) Less(i, j int) bool { return rs[i] < rs[j] }
-func (rs runeSlice) Swap(i, j int)      { rs[i], rs[j] = rs[j], rs[i] }
+func (rs RuneSlice) Len() int           { return len(rs) }
+func (rs RuneSlice) Less(i, j int) bool { return rs[i] < rs[j] }
+func (rs RuneSlice) Swap(i, j int)      { rs[i], rs[j] = rs[j], rs[i] }
 
-type runeSet map[rune]struct{}
+type RuneSet map[rune]struct{}
 
-func (rs runeSet) Put(key rune) {
+func (rs RuneSet) Put(key rune) {
 	rs[key] = struct{}{} // zero-byte struct
 }
 
-func (rs runeSet) Intersection(other runeSet) runeSet {
-	result := runeSet{}
+func (rs RuneSet) Intersection(other RuneSet) RuneSet {
+	result := RuneSet{}
 	for k := range rs {
 		if _, occurs := other[k]; occurs {
-			result[k] = struct{}{}
+			result.Put(k)
 		}
 	}
 	return result
 }
 
-func buildIndex(fileName string) (map[string]runeSet, map[rune]string) {
+func (rs RuneSet) ToRuneSlice() RuneSlice {
+	result := RuneSlice{}
+	for uchar := range rs {
+		result = append(result, uchar)
+	}
+	return result
+}
+
+func (rs RuneSet) String() string {
+	sl := rs.ToRuneSlice()
+	sort.Sort(sl)
+	str := "❮"
+	for i, uchar := range sl {
+		if i > 0 {
+			str += " "
+		}
+		str += fmt.Sprintf("U+%04X", uchar)
+	}
+	return str + "❯"
+}
+
+func buildIndex(fileName string) (map[string]RuneSet, map[rune]string) {
 	if _, err := os.Stat(fileName); os.IsNotExist(err) {
 		getUcdFile(fileName)
 	}
@@ -84,7 +105,7 @@ func buildIndex(fileName string) (map[string]runeSet, map[rune]string) {
 	}
 	lines := strings.Split(string(content), "\n")
 
-	index := map[string]runeSet{}
+	index := map[string]RuneSet{}
 	names := map[rune]string{}
 
 	for _, line := range lines {
@@ -97,7 +118,7 @@ func buildIndex(fileName string) (map[string]runeSet, map[rune]string) {
 			for _, word := range strings.Split(fields[1], " ") {
 				existing, ok := index[word]
 				if !ok {
-					existing = runeSet{}
+					existing = RuneSet{}
 				}
 				existing.Put(uchar)
 				index[word] = existing
@@ -108,14 +129,14 @@ func buildIndex(fileName string) (map[string]runeSet, map[rune]string) {
 	return index, names
 }
 
-func getIndex() (map[string]runeSet, map[rune]string) {
+func getIndex() (map[string]RuneSet, map[rune]string) {
 	dir, _ := os.Getwd()
 	path := path.Join(dir, ucdFileName)
 	return buildIndex(path)
 }
 
-func findRunes(query []string, index map[string]runeSet) runeSlice {
-	commonRunes := runeSet{}
+func findRunes(query []string, index map[string]RuneSet) RuneSlice {
+	commonRunes := RuneSet{}
 	for i, word := range query {
 		word = strings.ToUpper(word)
 		found := index[word]
@@ -128,10 +149,7 @@ func findRunes(query []string, index map[string]runeSet) runeSlice {
 			break
 		}
 	}
-	result := runeSlice{}
-	for uchar := range commonRunes {
-		result = append(result, uchar)
-	}
+	result := commonRunes.ToRuneSlice()
 	sort.Sort(result)
 	return result
 }
