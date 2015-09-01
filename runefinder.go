@@ -145,10 +145,10 @@ func buildIndex(indexDir string) RuneIndex {
 	if err != nil {
 		fmt.Printf("WARNING: Unable to save index file.")
 	} else {
-		dataEncoder := gob.NewEncoder(indexFile)
+		encoder := gob.NewEncoder(indexFile)
 		defer indexFile.Close()
-		dataEncoder.Encode(index.characters)
-		dataEncoder.Encode(index.names)
+		encoder.Encode(index.characters)
+		encoder.Encode(index.names)
 	}
 	return index
 }
@@ -171,13 +171,13 @@ func getIndex() RuneIndex {
 	index.characters = map[string]RuneSet{}
 	index.names = map[rune]string{}
 
-	dataDecoder := gob.NewDecoder(indexFile)
-	err = dataDecoder.Decode(&index.characters)
+	decoder := gob.NewDecoder(indexFile)
+	err = decoder.Decode(&index.characters)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	err = dataDecoder.Decode(&index.names)
+	err = decoder.Decode(&index.names)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
