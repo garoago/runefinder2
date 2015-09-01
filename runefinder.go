@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/gob"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -139,6 +140,16 @@ func buildIndex(indexDir string) RuneIndex {
 		}
 
 	}
+	indexPath := path.Join(indexDir, indexFileName)
+	indexFile, err := os.Create(indexPath)
+	if err != nil {
+		fmt.Printf("WARNING: Unable to save index file.")
+	} else {
+		dataEncoder := gob.NewEncoder(indexFile)
+		defer indexFile.Close()
+		dataEncoder.Encode(index.characters)
+		dataEncoder.Encode(index.names)
+	}
 	return index
 }
 
@@ -149,7 +160,29 @@ func getIndex() RuneIndex {
 		return buildIndex(indexDir)
 	}
 	// load existing index
-	return buildIndex(indexDir)
+	indexFile, err := os.Open(indexPath)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	defer indexFile.Close()
+
+	var index RuneIndex
+	index.characters = map[string]RuneSet{}
+	index.names = map[rune]string{}
+
+	dataDecoder := gob.NewDecoder(indexFile)
+	err = dataDecoder.Decode(&index.characters)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	err = dataDecoder.Decode(&index.names)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	return index
 }
 
 func findRunes(query []string, index RuneIndex) RuneSlice {
