@@ -15,6 +15,7 @@ import (
 
 const ucdFileName = "UnicodeData.txt"
 const ucdBaseUrl = "http://www.unicode.org/Public/UCD/latest/ucd/"
+const indexFileName = "runefinder.gob"
 
 func progressDisplay(running <-chan bool) {
 	for {
@@ -100,18 +101,25 @@ func (rs RuneSet) String() string {
 	return str + "❯"
 }
 
-func buildIndex(fileName string) (map[string]RuneSet, map[rune]string) {
-	if _, err := os.Stat(fileName); os.IsNotExist(err) {
-		getUcdFile(fileName)
+type RuneIndex struct {
+	characters map[string]RuneSet
+	names      map[rune]string
+}
+
+func buildIndex(indexDir string) RuneIndex {
+	ucdPath := path.Join(indexDir, ucdFileName)
+	if _, err := os.Stat(ucdPath); os.IsNotExist(err) {
+		getUcdFile(ucdPath)
 	}
-	content, err := ioutil.ReadFile(fileName)
+	content, err := ioutil.ReadFile(ucdPath)
 	if err != nil {
 		panic(err)
 	}
 	lines := strings.Split(string(content), "\n")
 
-	index := map[string]RuneSet{}
-	names := map[rune]string{}
+	var index RuneIndex
+	index.characters = map[string]RuneSet{}
+	index.names = map[rune]string{}
 
 	for _, line := range lines {
 		var uchar rune
@@ -119,32 +127,36 @@ func buildIndex(fileName string) (map[string]RuneSet, map[rune]string) {
 		if len(fields) >= 2 {
 			code64, _ := strconv.ParseInt(fields[0], 16, 0)
 			uchar = rune(code64)
-			names[uchar] = fields[1]
+			index.names[uchar] = fields[1]
 			for _, word := range strings.Split(fields[1], " ") {
-				existing, ok := index[word]
+				existing, ok := index.characters[word]
 				if !ok {
 					existing = RuneSet{}
 				}
 				existing.Put(uchar)
-				index[word] = existing
+				index.characters[word] = existing
 			}
 		}
 
 	}
-	return index, names
+	return index
 }
 
-func getIndex() (map[string]RuneSet, map[rune]string) {
-	dir, _ := os.Getwd()
-	path := path.Join(dir, ucdFileName)
-	return buildIndex(path)
+func getIndex() RuneIndex {
+	indexDir, _ := os.Getwd()
+	indexPath := path.Join(indexDir, indexFileName)
+	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
+		return buildIndex(indexDir)
+	}
+	// load existing index
+	return buildIndex(indexDir)
 }
 
-func findRunes(query []string, index map[string]RuneSet) RuneSlice {
+func findRunes(query []string, index RuneIndex) RuneSlice {
 	commonRunes := RuneSet{}
 	for i, word := range query {
 		word = strings.ToUpper(word)
-		found := index[word]
+		found := index.characters[word]
 		if i == 0 {
 			commonRunes = found
 		} else {
@@ -166,7 +178,7 @@ func main() {
 	}
 	words := os.Args[1:]
 
-	index, names := getIndex()
+	index := getIndex()
 
 	count := 0
 	format := "U+%04X  %c \t%s\n"
@@ -174,7 +186,7 @@ func main() {
 		if uchar > 0xFFFF {
 			format = "U+%5X %c \t%s\n"
 		}
-		fmt.Printf(format, uchar, uchar, names[uchar])
+		fmt.Printf(format, uchar, uchar, index.names[uchar])
 		count++
 	}
 	fmt.Printf("%d characters found\n", count)
