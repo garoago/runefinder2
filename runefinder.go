@@ -104,8 +104,8 @@ func (rs RuneSet) String() string {
 }
 
 type RuneIndex struct {
-	characters map[string]RuneSet
-	names      map[rune]string
+	Characters map[string]RuneSet
+	Names      map[rune]string
 }
 
 func buildIndex(indexDir string) RuneIndex {
@@ -120,8 +120,8 @@ func buildIndex(indexDir string) RuneIndex {
 	lines := strings.Split(string(content), "\n")
 
 	var index RuneIndex
-	index.characters = map[string]RuneSet{}
-	index.names = map[rune]string{}
+	index.Characters = map[string]RuneSet{}
+	index.Names = map[rune]string{}
 
 	for _, line := range lines {
 		var uchar rune
@@ -129,14 +129,14 @@ func buildIndex(indexDir string) RuneIndex {
 		if len(fields) >= 2 {
 			code64, _ := strconv.ParseInt(fields[0], 16, 0)
 			uchar = rune(code64)
-			index.names[uchar] = fields[1]
+			index.Names[uchar] = fields[1]
 			for _, word := range strings.Split(fields[1], " ") {
-				existing, ok := index.characters[word]
+				existing, ok := index.Characters[word]
 				if !ok {
 					existing = RuneSet{}
 				}
 				existing.Put(uchar)
-				index.characters[word] = existing
+				index.Characters[word] = existing
 			}
 		}
 
@@ -148,8 +148,7 @@ func buildIndex(indexDir string) RuneIndex {
 	} else {
 		defer indexFile.Close()
 		encoder := gob.NewEncoder(indexFile)
-		encoder.Encode(index.characters)
-		encoder.Encode(index.names)
+		encoder.Encode(index)
 	}
 	return index
 }
@@ -168,17 +167,11 @@ func getIndex() RuneIndex {
 	defer indexFile.Close()
 
 	var index RuneIndex
-	index.characters = map[string]RuneSet{}
-	index.names = map[rune]string{}
 
 	decoder := gob.NewDecoder(indexFile)
-	err = decoder.Decode(&index.characters)
+	err = decoder.Decode(&index)
 	if err != nil {
-		log.Fatal("getIndex/Decode/characters:", err)
-	}
-	err = decoder.Decode(&index.names)
-	if err != nil {
-		log.Fatal("getIndex/Decode/names:", err)
+		log.Fatal("getIndex/Decode:", err)
 	}
 	return index
 }
@@ -187,7 +180,7 @@ func findRunes(query []string, index RuneIndex) RuneSlice {
 	commonRunes := RuneSet{}
 	for i, word := range query {
 		word = strings.ToUpper(word)
-		found := index.characters[word]
+		found := index.Characters[word]
 		if i == 0 {
 			commonRunes = found
 		} else {
@@ -217,7 +210,7 @@ func main() {
 		if uchar > 0xFFFF {
 			format = "U+%5X %c \t%s\n"
 		}
-		fmt.Printf(format, uchar, uchar, index.names[uchar])
+		fmt.Printf(format, uchar, uchar, index.Names[uchar])
 		count++
 	}
 	fmt.Printf("%d characters found\n", count)
