@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"path"
@@ -40,16 +41,16 @@ func getUcdFile(fileName string) {
 	}()
 	response, err := http.Get(url)
 	if err != nil {
-		panic(err)
+		log.Fatal("getUcdFile/http.Get:", err)
 	}
 	defer response.Body.Close()
 	file, err := os.Create(fileName)
 	if err != nil {
-		panic(err)
+		log.Fatal("getUcdFile/os.Create:", err)
 	}
 	_, err = io.Copy(file, response.Body)
 	if err != nil {
-		panic(err)
+		log.Fatal("getUcdFile/io.Copy:", err)
 	}
 	file.Close()
 }
@@ -114,7 +115,7 @@ func buildIndex(indexDir string) RuneIndex {
 	}
 	content, err := ioutil.ReadFile(ucdPath)
 	if err != nil {
-		panic(err)
+		log.Fatal("buildIndex/ioutil.ReadFile:", err)
 	}
 	lines := strings.Split(string(content), "\n")
 
@@ -143,7 +144,7 @@ func buildIndex(indexDir string) RuneIndex {
 	indexPath := path.Join(indexDir, indexFileName)
 	indexFile, err := os.Create(indexPath)
 	if err != nil {
-		fmt.Printf("WARNING: Unable to save index file.")
+		log.Printf("WARNING: Unable to save index file.")
 	} else {
 		encoder := gob.NewEncoder(indexFile)
 		defer indexFile.Close()
@@ -162,8 +163,7 @@ func getIndex() RuneIndex {
 	// load existing index
 	indexFile, err := os.Open(indexPath)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal("getIndex/os.Open:", err)
 	}
 	defer indexFile.Close()
 
@@ -174,13 +174,11 @@ func getIndex() RuneIndex {
 	decoder := gob.NewDecoder(indexFile)
 	err = decoder.Decode(&index.characters)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal("getIndex/Decode/characters:", err)
 	}
 	err = decoder.Decode(&index.names)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal("getIndex/Decode/names:", err)
 	}
 	return index
 }
@@ -223,5 +221,4 @@ func main() {
 		count++
 	}
 	fmt.Printf("%d characters found\n", count)
-
 }
