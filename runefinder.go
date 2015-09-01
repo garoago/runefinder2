@@ -146,8 +146,8 @@ func buildIndex(indexDir string) RuneIndex {
 	if err != nil {
 		log.Printf("WARNING: Unable to save index file.")
 	} else {
-		encoder := gob.NewEncoder(indexFile)
 		defer indexFile.Close()
+		encoder := gob.NewEncoder(indexFile)
 		encoder.Encode(index.characters)
 		encoder.Encode(index.names)
 	}
