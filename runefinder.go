@@ -15,8 +15,7 @@ import (
 )
 
 const (
-	ucdFileName   = "UnicodeData.txt"
-	ucdBaseUrl    = "http://www.unicode.org/Public/UCD/latest/ucd/"
+	ucdUrl        = "http://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt"
 	indexFileName = "runefinder-index.gob"
 )
 
@@ -85,14 +84,13 @@ func progressDisplay(running <-chan bool) {
 }
 
 func getUcdLines() []string {
-	url := ucdBaseUrl + ucdFileName
-	fmt.Printf("Index not found. Retrieving data from:\n%s\n", url)
+	fmt.Printf("Index not found. Retrieving data from:\n%s\n", ucdUrl)
 	running := make(chan bool)
 	go progressDisplay(running)
 	defer func() {
 		running <- false
 	}()
-	response, err := http.Get(url)
+	response, err := http.Get(ucdUrl)
 	if err != nil {
 		log.Fatal("getUcdFile/http.Get:", err)
 	}
