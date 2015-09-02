@@ -102,7 +102,7 @@ func getUcdLines() []string {
 	return strings.Split(string(content), "\n")
 }
 
-func buildIndex(indexPath string) RuneIndex {
+func buildIndex() RuneIndex {
 	var index RuneIndex
 	index.Characters = map[string]RuneSet{}
 	index.Names = map[rune]string{}
@@ -126,6 +126,10 @@ func buildIndex(indexPath string) RuneIndex {
 		}
 
 	}
+	return index
+}
+
+func saveIndex(index RuneIndex, indexPath string) {
 	indexFile, err := os.Create(indexPath)
 	if err != nil {
 		log.Printf("WARNING: Unable to save index file.")
@@ -134,14 +138,17 @@ func buildIndex(indexPath string) RuneIndex {
 		encoder := gob.NewEncoder(indexFile)
 		encoder.Encode(index)
 	}
-	return index
 }
 
 func getIndex() RuneIndex {
+	var index RuneIndex
 	indexDir, _ := os.Getwd()
 	indexPath := path.Join(indexDir, indexFileName)
 	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
-		return buildIndex(indexPath)
+		index = buildIndex()
+		// XXX do this async, but main() must wait for it to finish
+		saveIndex(index, indexPath)
+		return index
 	}
 	// load existing index
 	indexFile, err := os.Open(indexPath)
@@ -149,8 +156,6 @@ func getIndex() RuneIndex {
 		log.Fatal("getIndex/os.Open:", err)
 	}
 	defer indexFile.Close()
-
-	var index RuneIndex
 
 	decoder := gob.NewDecoder(indexFile)
 	err = decoder.Decode(&index)
