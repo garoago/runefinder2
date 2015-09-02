@@ -38,9 +38,11 @@ func (rs RuneSet) Contains(key rune) bool {
 
 func (rs RuneSet) Intersection(other RuneSet) RuneSet {
 	result := RuneSet{}
-	for k := range rs {
-		if other.Contains(k) {
-			result.Put(k)
+	if len(other) > 0 {
+		for k := range rs {
+			if other.Contains(k) {
+				result.Put(k)
+			}
 		}
 	}
 	return result
@@ -116,8 +118,8 @@ func buildIndex() RuneIndex {
 			index.Names[uchar] = fields[1]
 			words := strings.Split(strings.ToUpper(fields[1]), " ")
 			for _, word := range words {
-				existing, ok := index.Characters[word]
-				if !ok {
+				existing, found := index.Characters[word]
+				if !found {
 					existing = RuneSet{}
 				}
 				existing.Put(uchar)
