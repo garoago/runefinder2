@@ -129,7 +129,7 @@ func buildIndex() RuneIndex {
 	return index
 }
 
-func saveIndex(index RuneIndex, indexPath string) {
+func saveIndex(index RuneIndex, indexPath string, saved chan<- bool) {
 	indexFile, err := os.Create(indexPath)
 	if err != nil {
 		log.Printf("WARNING: Unable to save index file.")
@@ -138,29 +138,30 @@ func saveIndex(index RuneIndex, indexPath string) {
 		encoder := gob.NewEncoder(indexFile)
 		encoder.Encode(index)
 	}
+	saved <- true
 }
 
-func getIndex() RuneIndex {
+func getIndex(saved chan<- bool) RuneIndex {
 	var index RuneIndex
 	indexDir, _ := os.Getwd()
 	indexPath := path.Join(indexDir, indexFileName)
 	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
 		index = buildIndex()
-		// XXX do this async, but main() must wait for it to finish
-		saveIndex(index, indexPath)
-		return index
-	}
-	// load existing index
-	indexFile, err := os.Open(indexPath)
-	if err != nil {
-		log.Fatal("getIndex/os.Open:", err)
-	}
-	defer indexFile.Close()
+		go saveIndex(index, indexPath, saved)
+	} else {
+		go func() { saved <- false }()
+		// load existing index
+		indexFile, err := os.Open(indexPath)
+		if err != nil {
+			log.Fatal("getIndex/os.Open:", err)
+		}
+		defer indexFile.Close()
 
-	decoder := gob.NewDecoder(indexFile)
-	err = decoder.Decode(&index)
-	if err != nil {
-		log.Fatal("getIndex/Decode:", err)
+		decoder := gob.NewDecoder(indexFile)
+		err = decoder.Decode(&index)
+		if err != nil {
+			log.Fatal("getIndex/Decode:", err)
+		}
 	}
 	return index
 }
@@ -191,7 +192,8 @@ func main() {
 	}
 	words := os.Args[1:]
 
-	index := getIndex()
+	saved := make(chan bool)
+	index := getIndex(saved)
 
 	count := 0
 	format := "U+%04X  %c \t%s\n"
@@ -203,4 +205,7 @@ func main() {
 		count++
 	}
 	fmt.Printf("%d characters found\n", count)
+	if <-saved {
+		fmt.Println("Index saved.")
+	}
 }
