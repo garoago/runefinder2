@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/gob"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -15,45 +14,11 @@ import (
 	"time"
 )
 
-const ucdFileName = "UnicodeData.txt"
-const ucdBaseUrl = "http://www.unicode.org/Public/UCD/latest/ucd/"
-const indexFileName = "runefinder.gob"
-
-func progressDisplay(running <-chan bool) {
-	for {
-		select {
-		case <-running:
-			fmt.Println()
-		case <-time.After(200 * time.Millisecond):
-			fmt.Print(".")
-		}
-	}
-}
-
-func getUcdFile(fileName string) {
-
-	url := ucdBaseUrl + ucdFileName
-	fmt.Printf("%s not found\nretrieving from %s\n", ucdFileName, url)
-	running := make(chan bool)
-	go progressDisplay(running)
-	defer func() {
-		running <- false
-	}()
-	response, err := http.Get(url)
-	if err != nil {
-		log.Fatal("getUcdFile/http.Get:", err)
-	}
-	defer response.Body.Close()
-	file, err := os.Create(fileName)
-	if err != nil {
-		log.Fatal("getUcdFile/os.Create:", err)
-	}
-	_, err = io.Copy(file, response.Body)
-	if err != nil {
-		log.Fatal("getUcdFile/io.Copy:", err)
-	}
-	file.Close()
-}
+const (
+	ucdFileName   = "UnicodeData.txt"
+	ucdBaseUrl    = "http://www.unicode.org/Public/UCD/latest/ucd/"
+	indexFileName = "runefinder-index.gob"
+)
 
 type RuneSlice []rune
 
@@ -108,22 +73,43 @@ type RuneIndex struct {
 	Names      map[rune]string
 }
 
-func buildIndex(indexDir string) RuneIndex {
-	ucdPath := path.Join(indexDir, ucdFileName)
-	if _, err := os.Stat(ucdPath); os.IsNotExist(err) {
-		getUcdFile(ucdPath)
+func progressDisplay(running <-chan bool) {
+	for {
+		select {
+		case <-running:
+			fmt.Println()
+		case <-time.After(200 * time.Millisecond):
+			fmt.Print(".")
+		}
 	}
-	content, err := ioutil.ReadFile(ucdPath)
-	if err != nil {
-		log.Fatal("buildIndex/ioutil.ReadFile:", err)
-	}
-	lines := strings.Split(string(content), "\n")
+}
 
+func getUcdLines() []string {
+	url := ucdBaseUrl + ucdFileName
+	fmt.Printf("Index not found. Retrieving data from:\n%s\n", url)
+	running := make(chan bool)
+	go progressDisplay(running)
+	defer func() {
+		running <- false
+	}()
+	response, err := http.Get(url)
+	if err != nil {
+		log.Fatal("getUcdFile/http.Get:", err)
+	}
+	content, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		log.Fatal("buildIndex/ioutil.ReadAll:", err)
+	}
+	defer response.Body.Close()
+	return strings.Split(string(content), "\n")
+}
+
+func buildIndex(indexDir string) RuneIndex {
 	var index RuneIndex
 	index.Characters = map[string]RuneSet{}
 	index.Names = map[rune]string{}
 
-	for _, line := range lines {
+	for _, line := range getUcdLines() {
 		var uchar rune
 		fields := strings.Split(line, ";")
 		if len(fields) >= 2 {
