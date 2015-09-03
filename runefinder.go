@@ -135,12 +135,13 @@ func saveIndex(index RuneIndex, indexPath string, saved chan<- bool) {
 	indexFile, err := os.Create(indexPath)
 	if err != nil {
 		log.Printf("WARNING: Unable to save index file.")
+		saved <- false
 	} else {
 		defer indexFile.Close()
 		encoder := gob.NewEncoder(indexFile)
 		encoder.Encode(index)
+		saved <- true
 	}
-	saved <- true
 }
 
 func getIndex(saved chan<- bool) RuneIndex {
