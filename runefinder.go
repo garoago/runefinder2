@@ -147,7 +147,7 @@ func getIndex(saved chan<- bool) RuneIndex {
 	var index RuneIndex
 	indexDir, _ := os.Getwd()
 	indexPath := path.Join(indexDir, indexFileName)
-	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
+	if _, err := os.Stat(indexPath); os.IsNotExist(err) { // TODO: rewrite test with os.Open
 		index = buildIndex()
 		go saveIndex(index, indexPath, saved)
 	} else {
