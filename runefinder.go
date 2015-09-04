@@ -104,8 +104,7 @@ func getUcdLines() []string {
 	return strings.Split(string(content), "\n")
 }
 
-func buildIndex() RuneIndex {
-	var index RuneIndex
+func buildIndex() (index RuneIndex) {
 	index.Characters = map[string]RuneSet{}
 	index.Names = map[rune]string{}
 
@@ -144,27 +143,26 @@ func saveIndex(index RuneIndex, indexPath string, saved chan<- bool) {
 	}
 }
 
-func getIndex(saved chan<- bool) RuneIndex {
-	var index RuneIndex
+func getIndex(saved chan<- bool) (index RuneIndex) {
 	indexDir, _ := os.Getwd()
 	indexPath := path.Join(indexDir, indexFileName)
-	if _, err := os.Stat(indexPath); os.IsNotExist(err) { // TODO: rewrite test with os.Open
-		index = buildIndex()
-		go saveIndex(index, indexPath, saved)
-	} else {
-		go func() { saved <- false }()
+	indexFile, err := os.Open(indexPath)
+	switch {
+	case err == nil:
 		// load existing index
-		indexFile, err := os.Open(indexPath)
-		if err != nil {
-			log.Fatal("getIndex/os.Open:", err)
-		}
 		defer indexFile.Close()
-
 		decoder := gob.NewDecoder(indexFile)
 		err = decoder.Decode(&index)
 		if err != nil {
 			log.Fatal("getIndex/Decode:", err)
 		}
+		go func() { saved <- false }()
+	case os.IsNotExist(err):
+		// build and save index
+		index = buildIndex()
+		go saveIndex(index, indexPath, saved)
+	default:
+		log.Fatal("getIndex/os.Open:", err)
 	}
 	return index
 }
