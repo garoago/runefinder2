@@ -148,8 +148,7 @@ func getIndex(saved chan<- bool) (index RuneIndex) {
 	indexPath := path.Join(indexDir, indexFileName)
 	indexFile, err := os.Open(indexPath)
 	switch {
-	case err == nil:
-		// load existing index
+	case err == nil: // load existing index
 		defer indexFile.Close()
 		decoder := gob.NewDecoder(indexFile)
 		err = decoder.Decode(&index)
@@ -157,8 +156,7 @@ func getIndex(saved chan<- bool) (index RuneIndex) {
 			log.Fatal("getIndex/Decode:", err)
 		}
 		go func() { saved <- false }()
-	case os.IsNotExist(err):
-		// build and save index
+	case os.IsNotExist(err): // build and save index
 		index = buildIndex()
 		go saveIndex(index, indexPath, saved)
 	default:
@@ -191,13 +189,13 @@ func main() {
 		fmt.Println("Usage:  runefinder <word>\texample: runefinder cat")
 		os.Exit(1)
 	}
-	words := os.Args[1:]
 
+	words := os.Args[1:]
 	saved := make(chan bool)
 	index := getIndex(saved)
-
 	count := 0
 	format := "U+%04X  %c \t%s\n"
+
 	for _, uchar := range findRunes(words, index) {
 		if uchar > 0xFFFF {
 			format = "U+%5X %c \t%s\n"
