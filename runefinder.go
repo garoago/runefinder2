@@ -75,10 +75,12 @@ type RuneIndex struct {
 }
 
 func progressDisplay(running <-chan bool) {
+Loop:
 	for {
 		select {
 		case <-running:
 			fmt.Println()
+			break Loop
 		case <-time.After(200 * time.Millisecond):
 			fmt.Print(".")
 		}
