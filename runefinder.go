@@ -114,7 +114,8 @@ func buildIndex(indexPath string) RuneIndex {
 			code64, _ := strconv.ParseInt(fields[0], 16, 0)
 			uchar = rune(code64)
 			index.Names[uchar] = fields[1]
-			words := strings.Split(strings.ToUpper(fields[1]), " ")
+			name := strings.Replace(fields[1], "-", " ", -1)
+			words := strings.Split(strings.ToUpper(name), " ")
 			for _, word := range words {
 				existing, ok := index.Characters[word]
 				if !ok {
