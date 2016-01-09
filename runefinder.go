@@ -38,9 +38,11 @@ func (rs RuneSet) Contains(key rune) bool {
 
 func (rs RuneSet) Intersection(other RuneSet) RuneSet {
 	result := RuneSet{}
-	for k := range rs {
-		if other.Contains(k) {
-			result.Put(k)
+	if len(other) > 0 {
+		for k := range rs {
+			if other.Contains(k) {
+				result.Put(k)
+			}
 		}
 	}
 	return result
@@ -73,10 +75,12 @@ type RuneIndex struct {
 }
 
 func progressDisplay(running <-chan bool) {
+Loop:
 	for {
 		select {
 		case <-running:
 			fmt.Println()
+			break Loop
 		case <-time.After(200 * time.Millisecond):
 			fmt.Print(".")
 		}
@@ -102,8 +106,7 @@ func getUcdLines() []string {
 	return strings.Split(string(content), "\n")
 }
 
-func buildIndex(indexPath string) RuneIndex {
-	var index RuneIndex
+func buildIndex() (index RuneIndex) {
 	index.Characters = map[string]RuneSet{}
 	index.Names = map[rune]string{}
 
@@ -117,8 +120,8 @@ func buildIndex(indexPath string) RuneIndex {
 			name := strings.Replace(fields[1], "-", " ", -1)
 			words := strings.Split(strings.ToUpper(name), " ")
 			for _, word := range words {
-				existing, ok := index.Characters[word]
-				if !ok {
+				existing, found := index.Characters[word]
+				if !found {
 					existing = RuneSet{}
 				}
 				existing.Put(uchar)
@@ -127,36 +130,40 @@ func buildIndex(indexPath string) RuneIndex {
 		}
 
 	}
+	return index
+}
+
+func saveIndex(index RuneIndex, indexPath string, saved chan<- bool) {
 	indexFile, err := os.Create(indexPath)
 	if err != nil {
 		log.Printf("WARNING: Unable to save index file.")
+		saved <- false
 	} else {
 		defer indexFile.Close()
 		encoder := gob.NewEncoder(indexFile)
 		encoder.Encode(index)
+		saved <- true
 	}
-	return index
 }
 
-func getIndex() RuneIndex {
+func getIndex(saved chan<- bool) (index RuneIndex) {
 	indexDir, _ := os.Getwd()
 	indexPath := path.Join(indexDir, indexFileName)
-	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
-		return buildIndex(indexPath)
-	}
-	// load existing index
 	indexFile, err := os.Open(indexPath)
-	if err != nil {
+	switch {
+	case err == nil: // load existing index
+		defer indexFile.Close()
+		decoder := gob.NewDecoder(indexFile)
+		err = decoder.Decode(&index)
+		if err != nil {
+			log.Fatal("getIndex/Decode:", err)
+		}
+		go func() { saved <- false }()
+	case os.IsNotExist(err): // build and save index
+		index = buildIndex()
+		go saveIndex(index, indexPath, saved)
+	default:
 		log.Fatal("getIndex/os.Open:", err)
-	}
-	defer indexFile.Close()
-
-	var index RuneIndex
-
-	decoder := gob.NewDecoder(indexFile)
-	err = decoder.Decode(&index)
-	if err != nil {
-		log.Fatal("getIndex/Decode:", err)
 	}
 	return index
 }
@@ -185,12 +192,13 @@ func main() {
 		fmt.Println("Usage:  runefinder <word>\texample: runefinder cat")
 		os.Exit(1)
 	}
+
 	words := os.Args[1:]
-
-	index := getIndex()
-
+	saved := make(chan bool)
+	index := getIndex(saved)
 	count := 0
 	format := "U+%04X  %c \t%s\n"
+
 	for _, uchar := range findRunes(words, index) {
 		if uchar > 0xFFFF {
 			format = "U+%5X %c \t%s\n"
@@ -199,4 +207,7 @@ func main() {
 		count++
 	}
 	fmt.Printf("%d characters found\n", count)
+	if <-saved {
+		fmt.Println("Index saved.")
+	}
 }

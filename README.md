@@ -30,8 +30,10 @@ This is a port of the Python [charfinder](https://github.com/fluentpython/exampl
 
 Go development was done during [Garoa Gophers](https://garoa.net.br/wiki/Garoa_Gophers) meetings with:
 
+* Afonso Coutinho ([@afonso](https://github.com/afonso/))
 * Alexandre Souza ([@alexandre](https://github.com/alexandre/))
 * Andrews Medina ([@andrewsmedina](https://github.com/andrewsmedina/))
 * João "JC" Martins ([@jcmartins](https://github.com/jcmartins))
 * Luciano Ramalho ([@ramalho](https://github.com/ramalho/))
+* Marcio Ribeiro ([@mmr](https://github.com/mmr/))
 * Michael Howard
